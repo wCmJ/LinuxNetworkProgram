@@ -1,0 +1,65 @@
+
+user:   program library
+------------------------------------------------------
+                system call
+        
+    filesystem                  process control
+    (                           (
+    allocate                    schedule
+    store                       communicate
+    idle management             allocate
+    search                      store
+    )                           )
+        high speed cache
+    drive program   
+------------------------------------------------------    
+    hard device
+    
+
+
+stream:
+-------------------------------------------------------------------------------------
+     device         |                     kernel                     |    user
+                    |                                                |
+                    |         drive     modules    stream head       |
+                    |         ------------------------------         |
+                    |                   read queue                   |
+                    |                   write queue                  |
+-------------------------------------------------------------------------------------
+pipe is a stream
+standard I/O library is a stream.
+
+
+process |--- code
+        |--- data |--- variable data
+                  |--- external data
+                  |--- program stack and heap
+fork():copy invoke process to create new process, basic action
+    pid_t fork(void);
+    parent ---> child
+    return value can different parent and child process.
+    it is non-zero(child process ID) in parent process, it is zero in child process.
+        
+exec():use new code to cover memory to change process
+    exec() do not create a new process, just replace code with new code.
+    int execl(const char *path, const char *arg, ...);
+        path means valid dir of executable file, this file can not be shell commands file.
+        
+        
+    int execlp(const char *file, const char *arg, ...);
+    int execle(const char *path, const char *arg, ..., char* const envp[]);
+    int execv(const char *path, char* const argv[]);
+    int execvp(const char *file, char* const argv[]);
+    
+wait():make process wait until another terminate
+exit():to terminal a process
+
+
+    
+    
+
+
+
+
+
+
