@@ -1,0 +1,134 @@
+-----------------------------------------------     SIGNAL   ------------------------------------------------------
+bits/signum.h
+SIGNAL:
+    SIGINT
+    SIGHUP
+    SIGTRAP
+    SIGILL
+    SIGQUIT
+    SIGFPE
+    SIGKILL
+    SIGALRM
+    SIGTERM
+    SIGSTOP
+    SIGUSR1/SIGUSR2
+    SIGCHLD
+                        parent wait() 
+        child   exit()  ------------>   wake parent
+                        
+                        parent do not wait()
+                        ------------------->    parent do not catch SIGCHLD, this signal do not work and child get into zombie
+                        
+                        parent ignore SIGCHLD
+                        --------------------->  child end
+                        
+    ...
+    
+    core dump: SIGQUIT/SIGILL/SIGTRAP/SIGSYS/SIGFPE
+    
+    #include<signal.h>
+    int signal(int sig, __sighandler_t handler);
+    sig can be anyone except SIGKILL/SIGSTOP
+    SIG_IGN/SIG_DFL: ignore/default
+    process1 ---> exec() ---> process1: SIG_IGN and SIG_DFL is same
+    process1 ---> fork() ---> process2 ---> exec(): exec will invoke SIG_DFL
+    
+    system call can not be interrupted by signal except wait/pause/read/write/open, they will return -1 and set errno to EINTR.
+    same signal can not be interrupted. different signal will be interrupted.
+    same signal can not be keep and order can not be keep
+    
+    #include<signal.h>
+    int kill(pid_t pid, int sig);
+    pid == 0: all processes in group process that contains current process
+    pid == -1: from high to low to all processes
+    pid < -1: all processes in group process that gid is abs(pid);
+    
+    one user's process can not send signal to another user's process.
+    
+    signal(SIGALRM, handler);
+    alarm(seconds);
+    pause();
+    
+    int setjump(jmp_buf env); // keep stack/heap status, then return;
+    void longjmp(jmp_buf env, int val); // never return;
+    
+    
+-----------------------------------------------     PIPE   ------------------------------------------------------
+    one program's output    --->    another's input
+    when create a pipe, kernel create a pair of handle(one stream), one for read, one for write.
+    
+    pipe();
+    int pipe(inf fd[2]);
+    0 on success
+    -1 on error:    errno = EMFILE(no free descriptors)
+                    errno = EFAULT(fd arrau is not valid)
+    fd[0] for read, fd[1] for write
+    
+    dup();
+    int dup(int oldfd);
+    new descriptor on success
+    -1 on error:    errno = EBADF(oldfd is not a valid descriptor)
+                            EMFILE(too many descriptors for the process)
+                            
+    
+    
+Example:
+    #include<stdio.h>
+    #include<unistd.h>
+    #include<string.h>
+    
+    int main()
+    {
+        int nbytes, fd[2];
+        char string[] = "Hello, world!\n";
+        char readBuffer[80];
+        pid_t childpid;
+        
+        pipe(fd);
+        if((childpid = fork()) == -1)
+        {
+            perror("fork error");
+            exit(0);
+        }
+        
+        if(childpid == 0)
+        {
+            close(fd[0]);//close read
+            write(fd[1],string, strlen(string));
+            exit(0);
+        }
+        else
+        {
+            close(fd[1]);
+            nbytes = read(fd[0],readBuffer, sizeof(readBuffer));
+            printf("Received data: %s\n",readBuffer);                
+        }    
+        return 0;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
