@@ -1,0 +1,97 @@
+
+当扩大整数范围时， 先转换，再运算。
+
+
+fork
+	pid_t fork();
+	diff:
+		pid, ppid, lock, address space of process
+
+exec
+	把一个新程序装入调用进程的内存空间/如果调用成功，调用进程将被覆盖
+	int execl(const char* path, const char *arg,...);
+	execl("/bin/ls","ls","-l",NULL);
+	如果execl返回，说明调用失败
+	系统检查文件的开头两个字节，判断是否为程序文件
+	exec执行新程序时，在程序中已经被打开的文件，在新程序中仍然被打开。文件描述符能通过exec传送给新程序，文件的指针也不会被改变
+	fcntl(fd, F_SETFD, 1);
+
+shell的工作情况：
+	shell从命令行接受到以正常方式执行一个命令或程序的要求时，调用fork,exec,wait，实现命令或程序的执行。
+	如果要求在后台执行一个命令或程序时，shell省略对wait的调用。
+	execl("/bin/sh","sh","-c",command,NULL);
+	-c表示从一个参数取得命令名，而不是从标准输入取得。
+	long pos = lseek(fd,offset,0/1/2);
+	0: start of file
+	1: current position of file
+	2: end of file
+
+	int fd = open("path of file", O_RDONLY);
+	read(fd, buf, len);
+
+wait
+	pit_t wait(int *status)
+	如果有多个子进程执行，那么父进程在第一个子进程结束时返回。
+	wait的返回值通常是结束的那个子进程的进程标识符。
+	wait(&status);
+	if(status & 0xFF)
+	{
+		//error
+	}
+	else
+	{
+		exitstatus=status >> 8;
+		exitstatus &= 0xFF;
+
+	}
+exit
+	void exit(int status);
+	停止进程的运行，清楚缓冲区，最重要的是，关闭所有已打开的文件。
+	如果父进程因执行了wait调用处于睡眠状态，子进程执行exit会重新启动父进程运行。
+
+僵尸进程：
+	子进程结束时，父进程并不在执行wait();
+	不使用任何内核资源，但是占用内核中进程处理表
+
+孤儿进程：
+	父进程比子进程先退出，子进程有init进程接管。
+
+
+进程0是调度进程，进程1是初始化进程
+	pid = getpid();
+	ppid = getppid();
+
+
+进程组标识符：
+	继承自父进程/
+	调用int setpgrp(void),以自己的进程标识符为进程组标识符，形成一个新的组。
+	int getpgrp();
+
+每个进程有自己的进程目录，chdir()改变的是进程本身的目录，所以cd命令并没有创建一个新的进程，否则改变的是子进程的目录。
+getuid()/geteuid()/getgid()/getegid()
+限制进程对资源的使用：getrlimit()/setrlimit()/getrusage()
+进程优先级：nice(int);
+
+守护进程：
+	后台运行，独立于所有终端控制之外的进程。
+	守护进程通过syslog系统调用向系统的log文件写入信息。
+	void syslog(int priority, char* format, ...);
+
+	建立守护进程：
+		1.fork子进程，将父进程关闭，子进程自动成为了后台进程。子进程非进程组的首进程，同时拥有自己的进程标识符
+		2.setsid()创建一个新的进程组，调用进程成为首进程，该进程脱离了原来的终端，成为独立于终端外的进程
+		3.忽略SIGHUP，重新fork，进程不再是进程组的首进程，可以防止某些情况下进程意外的打开终端而重新与终端发生联系
+		4.改便工作目录，chdir(),切断进程与原有文件系统的联系。
+		5.关闭已打开的文件句柄
+			for(i=0;i<MAXFD;i++)close(i);
+		6.打开Log系统
+		summary：
+			fork(), exit(0) 				创建子进程，关闭父进程
+			setsid();						创建进程组
+			signal(SIGHUP,SIN_IGN);			忽略SIGHUP
+			chdir("/");						改便工作目录
+			umask(0);						清楚文件掩码
+			for(i=0;i<MAXFD;++i)close(i);	关闭打开文件
+			openlog();						打开log文件
+
+
